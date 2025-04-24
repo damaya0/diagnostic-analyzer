@@ -27,7 +27,7 @@ git clone https://github.com/yourusername/diagnostic-analyzer-tool.git
 cd diagnostic-analyzer-tool
 
 # Install the package
-pip install -e .
+pip install .
 ```
 
 ## 📊 Usage
