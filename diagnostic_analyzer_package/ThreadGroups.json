@@ -1,0 +1,45 @@
+{
+    "threadGroups": [
+        {
+            "name": "HTTP Sender pool",
+            "poolName": "HTTP-Sender I/O dispatcher",
+            "threadCount": 200
+        },
+        {
+            "name": "HTTPS Sender pool",
+            "poolName": "HTTPS-Sender I/O dispatcher",
+            "threadCount": 200
+        },
+        {
+            "name": "HTTP listner pool",
+            "poolName": "HTTP-Listener I/O dispatcher",
+            "threadCount": 200
+        },
+        {
+            "name": "HTTPS listner pool",
+            "poolName": "HTTPS-Listener I/O dispatcher",
+            "threadCount": 200
+        },
+        {
+            "name": "Timer",
+            "poolName": "Timer",
+            "threadCount": 200
+        },
+        {
+            "name": "Pass Through Message Processor",
+            "poolName": "PassThroughMessageProcessor",
+            "threadCount": 200
+        },
+        {
+            "name": "Garbage Collector",
+            "poolName": "GC Thread",
+            "threadCount": 200
+        },
+        {
+            "name": "SynapseWorker",
+            "poolName": "SynapseWorker",
+            "threadCount": 200
+        }
+        
+    ]
+}
