@@ -32,10 +32,13 @@ pip install .
 
 ## 📊 Usage
 
-To run the Diagnostic Analyzer Tool:
+The Diagnostic Analyzer Tool is installed as a global CLI tool. To run it:
+
+1. Navigate to the directory where you want the analysis reports to be generated
+2. Run the tool using the command:
 
 ```bash
-python -m diagnostic_analyzer
+diagnostic_analyzer
 ```
 
 ### Interactive Workflow:
