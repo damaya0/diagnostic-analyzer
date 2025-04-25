@@ -1,0 +1,26 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.card-header {
+    border-bottom: 0;
+}
+
+pre {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* For loading state */
+.loading .spinner-border {
+    display: inline-block !important;
+}
+
+.loading #analyzeBtn {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

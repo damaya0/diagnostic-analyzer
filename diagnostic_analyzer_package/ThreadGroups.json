@@ -38,7 +38,7 @@
         {
             "name": "SynapseWorker",
             "poolName": "SynapseWorker",
-            "threadCount": 200
+            "threadCount": 100
         }
         
     ]

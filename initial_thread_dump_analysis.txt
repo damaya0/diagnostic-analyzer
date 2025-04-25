@@ -1,0 +1,8 @@
+Summary of Findings:
+There are no threads in the BLOCKED state and no deadlocks were detected.
+All the threads fall under normal states such as RUNNABLE, TIMED_WAITING, WAITING (parking), or sleeping.
+The PassThroughMessageProcessor threads are in a waiting (parking) state on a common notification object, which is expected behavior when idle.
+No threads indicate unusually high CPU usage or prolonged resource waiting that would suggest contention.
+The error observed when sending a payload is not clearly correlated with any abnormal thread state based on the provided dumps.
+
+THREADS_FOR_ANALYSIS: []

@@ -192,7 +192,7 @@ def embed_line_number(file_content, line_number):
     
 def get_file_path(filename: str, package_name: str) -> str:
     owner = "WSO2"
-    token = os.getenv("GITHUB_TOKEN")
+    token = os.getenv("GITHUB_API_KEY")
     path = package_name.replace('.', '/')
 
     try:
@@ -222,7 +222,7 @@ def search_file_paths(owner, filename, token):
     return [item['url'] for item in search_results['items']]
 
 def fetch_file_content(url: str) -> str:
-    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+    GITHUB_TOKEN = os.getenv("GITHUB_API_KEY")
     headers = {'Authorization': f'token {GITHUB_TOKEN}'}
     
     response = requests.get(url, headers=headers)
