@@ -12,9 +12,12 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card shadow">
-                    <div class="card-header bg-primary text-white text-center">
-                        <h1 class="display-6">Diagnostic Analyzer Tool</h1>
-                        <p class="lead mb-0">Analyze thread dumps and error logs</p>
+                    <div class="card-header bg-orange text-white text-center d-flex align-items-center">
+                        <img src="{{ url_for('static', filename='images/header_image.jpg') }}" alt="Header Image" class="me-3" style="height: 100px; width: auto;">
+                        <div>
+                            <h1 class="display-6">Diagnostic Analyzer Tool</h1>
+                            <p class="lead mb-0">for WSO2 Micro Integrator</p>
+                        </div>
                     </div>
                     <div class="card-body">
                         <form id="diagnosticForm">
