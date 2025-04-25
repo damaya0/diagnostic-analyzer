@@ -91,6 +91,7 @@ def analyze():
         'customer_problem': customer_problem,
         'problem_threads': problem_threads,
         'suspected_classes': suspected_classes,
+        'thread_analysis': thread_analysis,
         'comprehensive_thread_analysis': comprehensive_thread_analysis,
         'log_analysis': log_analysis,
         'error_message': error_message,
@@ -116,6 +117,7 @@ def analyze():
             'customer_problem': customer_problem,
             'problem_threads': problem_threads,
             'suspected_classes': suspected_classes,
+            'thread_analysis': thread_analysis,
             'comprehensive_thread_analysis': comprehensive_thread_analysis,
             'log_analysis': log_analysis,
             'final_report': final_report,
@@ -229,6 +231,7 @@ def analyze_classes():
         'customer_problem': analysis_data['customer_problem'],
         'problem_threads': analysis_data['problem_threads'],
         'suspected_classes': analysis_data['suspected_classes'],
+        'thread_analysis': analysis_data['thread_analysis'],
         'comprehensive_thread_analysis': analysis_data['comprehensive_thread_analysis'],
         'log_analysis': analysis_data['log_analysis'],
         'final_report': final_report,
@@ -249,6 +252,64 @@ def analyze_classes():
         print(f"Error cleaning up: {e}")
     
     return jsonify({"success": True, "redirect": f"/results?session_id={session_id}"})
+
+@app.route('/skip_class_analysis', methods=['GET'])
+def skip_class_analysis():
+    session_id = request.args.get('session_id')
+    if not session_id:
+        session_id = session.get('session_id')
+        
+    if not session_id:
+        return render_template('error.html', error="Session expired or invalid. Please start a new analysis.")
+    
+    # Load analysis data from file
+    data_file = os.path.join(SESSION_FILE_DIR, f"{session_id}.pkl")
+    try:
+        with open(data_file, 'rb') as f:
+            analysis_data = pickle.load(f)
+    except (FileNotFoundError, pickle.PickleError):
+        return render_template('error.html', error="Session data not found. Please start a new analysis.")
+    
+    # Generate final report without class analysis
+    try:
+        final_report = get_diagnostic_conclusion(
+            analysis_data['customer_problem'],
+            analysis_data['log_analysis'],
+            analysis_data['comprehensive_thread_analysis'],
+            None  # No class analysis
+        )
+    except Exception as e:
+        print(f"Error generating final report: {e}")
+        final_report = "Error generating final diagnostic report."
+    
+    # Store results in a file
+    results = {
+        'customer_problem': analysis_data['customer_problem'],
+        'problem_threads': analysis_data['problem_threads'],
+        'suspected_classes': analysis_data['suspected_classes'],
+        'thread_analysis': analysis_data['thread_analysis'],
+        'comprehensive_thread_analysis': analysis_data['comprehensive_thread_analysis'],
+        'log_analysis': analysis_data['log_analysis'],
+        'final_report': final_report,
+        'class_analysis': None,
+        'analyzed_classes': []  # No classes were analyzed
+    }
+    
+    results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
+    with open(results_file, 'wb') as f:
+        pickle.dump(results, f)
+    
+    # Clean up the temp directory and analysis data file
+    try:
+        temp_dir = analysis_data.get('temp_dir')
+        if temp_dir and os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        os.remove(data_file)
+    except Exception as e:
+        print(f"Error cleaning up: {e}")
+    
+    # Redirect to results page
+    return redirect(f'/results?session_id={session_id}')
 
 @app.route('/results')
 def results():

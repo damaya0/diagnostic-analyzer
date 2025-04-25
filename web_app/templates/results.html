@@ -34,6 +34,17 @@
                                 </div>
                             </div>
                         </div>
+
+                        {% if not results.problem_threads %}
+                        <div class="mb-4">
+                            <h3 class="h5">Thread Analysis</h3>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <pre class="mb-0">{{ results.thread_analysis }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         
                         {% if results.problem_threads %}
                         <div class="mb-4">

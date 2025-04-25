@@ -1,8 +1,9 @@
-Summary of Findings:
-There are no threads in the BLOCKED state and no deadlocks were detected.
-All the threads fall under normal states such as RUNNABLE, TIMED_WAITING, WAITING (parking), or sleeping.
-The PassThroughMessageProcessor threads are in a waiting (parking) state on a common notification object, which is expected behavior when idle.
-No threads indicate unusually high CPU usage or prolonged resource waiting that would suggest contention.
-The error observed when sending a payload is not clearly correlated with any abnormal thread state based on the provided dumps.
+Summary:
+No threads are in a BLOCKED state and no deadlocks were detected.
+All running threads appear in the RUNNABLE state while many others are in WAITING (parking) or TIMED_WAITING states.
+The I/O dispatcher threads (HTTP‐Sender, HTTPS‐Sender, HTTP/HTTPS‐Listener) are all in their RUNNABLE state holding expected locks.
+A large number of PassThroughMessageProcessor threads are waiting (parking) on an object monitor. This pattern is expected if the system’s thread pool is idle or waiting for tasks, and does not necessarily indicate a problem.
+There are no indications of high CPU usage or resource contention from the dumps.
+Overall, no unusual or problematic thread states were observed.
 
 THREADS_FOR_ANALYSIS: []

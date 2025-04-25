@@ -1,45 +1,70 @@
 1. Analysis of Problematic Threads
 
-PassThroughMessageProcessor-1, PassThroughMessageProcessor-50, and PassThroughMessageProcessor-107  
-These threads share a similar stack trace where they call Unsafe.park and subsequently wait on a LinkedBlockingQueue.  
-They are waiting for a new task from the thread pool’s work queue, which is a normal operation when no tasks are available.  
-The fact that over 100 instances of these threads exist suggests that either the thread pool is configured with higher limits than necessary or there is potential thread leakage if threads are not recycled properly.  
-There is no evidence of a lock or infinite loop within the stack trace; rather, the threads are scheduled to remain in a waiting state until a new payload arrives.
+PassThroughMessageProcessor-107  
+This thread is part of the pool that processes messages in a pass-through manner.  
+Its stack trace shows that it is parked inside a blocking call on a LinkedBlockingQueue.take.  
+It is waiting for a task from the thread pool executor using methods such as LockSupport.park and AbstractQueuedSynchronizer$ConditionObject.await.  
+A high number of similar threads (e.g. up to PassThroughMessageProcessor-107) indicate that the thread pool may be overprovisioned or misconfigured.  
+This can lead to resource exhaustion when a payload is sent because many idle threads may delay task acquisition or overwhelm system resources.
 
-endpoint-jmx-stat-collector  
-This thread is part of a scheduled operation that runs periodically to collect JMX statistics.  
-The stack trace indicates it is waiting on a ScheduledThreadPoolExecutor’s DelayedWorkQueue, which is normal behavior for periodic tasks.  
-There is no sign of resource contention as it simply remains parked until the scheduled time triggers data collection.
+PassThroughMessageProcessor-1  
+This thread is similar in behavior to PassThroughMessageProcessor-107.  
+It is parked waiting for a new task from the thread pool executor and its call stack follows the exact blocking pattern.  
+The large accumulation of such threads may further exacerbate resource contention, possibly delaying the processing of incoming payloads.
 
-PassThroughHTTPSSender  
-The stack trace for this thread shows that it is waiting during a polling operation via the KQueue poll mechanism.  
-It is part of the non-blocking I/O layer for sending HTTPS requests, and it intentionally waits for an I/O event before processing further.  
-This waiting indicates that the thread is not in a deadlock, but possibly that it is waiting for an external event which might be delayed due to downstream issues.
+PollTimer  
+The PollTimer thread is waiting on an Object.wait call inside a Timer thread loop.  
+This is standard behavior for timer threads that sleep until a scheduled task needs to run.  
+There are no indications of a lock problem with PollTimer, as it is not blocking any critical processing directly.
 
-2. Relationship to System Logs
+Timer-0  
+Like PollTimer, Timer-0 is also executing in a Timer thread that waits on Object.wait.  
+This operation is normal, indicating that this thread is correctly waiting for its next scheduled timer event.  
+There is no direct evidence that Timer-0 contributes to the payload error.
 
-The system logs record several successful log mediator messages indicating that the HealthcareAPI is responding with a “Welcome to HealthcareService” message.  
-However, a critical error appears when processing a message payload, specifically related to JSON parsing.  
-The error “Illegal character: <d>” in the log is thrown during the processing in the PayloadFactoryMediator and JSON-to-XML conversion.  
-This error suggests that the endpoint received a payload containing unexpected characters – likely the payload’s format does not match the expected JSON format.  
-As the JSON payload is malformed, the parser fails and throws an exception, leading to the observed error in the logs while the threads downstream simply return to a waiting state.
+HTTP-Listener I/O dispatcher-1  
+This thread is part of the I/O dispatcher for HTTP listeners, waiting on incoming network events.  
+Its stack trace shows it is in a native polling call (KQueue.poll) and then selecting channels via SelectorImpl.  
+Its waiting state indicates that it is idle, waiting for network I/O, and it is not directly implicated in the processing error.
+
+2. Relationship of Thread Issues to System Logs
+
+The system logs show an error related to payload processing, specifically:  
+"Could not get parser from data source for element jsonObject" and "Illegal character: <d".  
+This indicates that the payload being sent does not properly conform to the expected JSON format.  
+While the thread dumps show many PassThroughMessageProcessor threads parked in a waiting state, these threads become active when payloads are processed.  
+If the payload is malformed, the PayloadFactoryMediator fails during the transformation, leading to the XMLStreamException seen in the logs.  
+The high number of idle PassThroughMessageProcessor threads suggests that when a payload is finally submitted, the task management might be inefficient, potentially contributing to resource exhaustion and poor error recovery during input processing.
 
 3. Overall Diagnosis of the Root Cause
 
-The root cause appears to combine an application-level payload formatting issue and a potential misconfiguration in the thread pool management.  
-The PayloadFactoryMediator is designed to convert incoming JSON into XML.  
-The exception indicating an illegal character implies the payload contains unexpected content, potentially due to clients inadvertently sending malformed JSON or even XML instead of JSON.  
-Simultaneously, the large number of PassThroughMessageProcessor threads waiting may point to an overloaded or misconfigured thread pool that fails to efficiently recycle or limit idle threads, even though they are performing as designed.  
-The network thread (PassThroughHTTPSSender) is waiting for external I/O events, possibly indirectly impacted by the downstream error processing the malformed payload.
+The root cause appears to be twofold.  
+First, there is a misconfiguration or overprovisioning of the thread pool for PassThroughMessageProcessor threads, which could be leading to resource mismanagement when handling actual payloads.  
+Second, the payload error ("Illegal character: <d") indicates that the data sent to the endpoint is not valid JSON.  
+This malformed payload is causing the PayloadFactoryMediator to fail during its parsing attempt, triggering the error in the logs.  
+The combination of thread pool mismanagement and malformed payload input is leading to the micro integrator error observed.
 
-4. Suggested Solutions
+4. Suggested Solutions to Address the Identified Issues
 
-Review and validate incoming payloads before they reach the PayloadFactoryMediator.  
-Implement input validation at the API gateway or an earlier mediation step to detect and reject payloads that do not adhere to the expected JSON format.  
-Consider logging the raw payload content in a safe manner to diagnose the source of the format error.  
-Examine and adjust the configuration for the thread pool managing the PassThroughMessageProcessor threads.  
-Ensure that the thread pool’s maximum size and idle timeout settings are tuned to prevent an excessive number of waiting threads and to mitigate any potential thread leakage.  
-Review the behavior of the PayloadFactoryMediator to confirm that it correctly handles error scenarios, potentially implementing fallback behavior when encountering malformed payloads.  
-Conduct stress testing and simulate malformed payload scenarios to ensure that the system recovers gracefully without continuously piling up idle threads.
+Review and Adjust Thread Pool Configuration  
+Audit the configuration settings for the PassThroughMessageProcessor thread pool.  
+Reduce the maximum number of threads to better match the expected workload and available system resources.  
+Ensure that the thread pool is properly sized to handle peak loads without causing resource exhaustion.
 
-Each of these measures addresses the two primary issues observed in the system logs and thread dumps: payload format errors causing processing exceptions and a thread pool configuration that may not be optimal for the incoming load and error conditions.
+Validate and Sanitize Payloads  
+Implement input validation at the client or API gateway level to ensure that payloads conform to the expected JSON format before being sent to the endpoint.  
+Apply schema or format validation to catch illegal characters or malformed JSON early in the processing pipeline.
+
+Review and Configure Payload Transformation Logic  
+Examine the PayloadFactoryMediator configuration to ensure it correctly handles the expected JSON structure.  
+Consider adding error-handling or fallback logic in the transformation process so that malformed payloads do not result in cascading failures.
+
+Monitor System Resource Usage  
+Set up monitoring to track thread pool activity and resource utilization.  
+This will help identify when the system is nearing resource exhaustion, allowing proactive adjustments in configuration.
+
+Apply Software Updates and Best Practices  
+Ensure that the micro integrator and related components are updated to versions that include improved error handling for malformed payloads.  
+Follow best practices for concurrency management and I/O operations to mitigate the effects of any misconfigurations.
+
+By addressing both the thread pool configuration and the input payload format, the system should be able to process payloads more reliably without exhausting resources or encountering transformation errors.
