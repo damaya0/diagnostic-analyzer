@@ -1,9 +1,0 @@
-Summary:
-No threads are in a BLOCKED state.
-No deadlocks are observed.
-Most threads appear in RUNNABLE or TIMED_WAITING (parking) states, which is expected for I/O dispatchers, message processors, and timer tasks.
-There is no indication of high CPU usage or of threads waiting excessively for resources.
-The overall thread activity does not show any unusual states that would point to a systemic problem.
-The error reported when sending a payload does not appear to be reflected by any abnormality in the thread dump.
-
-THREADS_FOR_ANALYSIS: []

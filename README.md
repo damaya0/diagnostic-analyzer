@@ -142,6 +142,7 @@ The Diagnostic Analyzer Tool operates through a sequence of analytical steps:
 ## 📂 Project Structure
 ```
 ├── .gitignore
+├── README.md
 ├── diagnostic_analyzer_package
     ├── ThreadGroups.json
     ├── __init__.py
@@ -153,5 +154,22 @@ The Diagnostic Analyzer Tool operates through a sequence of analytical steps:
     ├── thread_analyzer.py
     ├── thread_dump_processor.py
     └── utils.py
-└── setup.py
+├── screenshots
+├── setup.py
+└── web_app
+    ├── app.py
+    ├── session_data
+    ├── static
+        ├── css
+        │   └── style.css
+        ├── images
+        └── js
+        │   ├── class_selection.js
+        │   └── main.js
+    └── templates
+        ├── error.html
+        ├── index.html
+        ├── results.html
+        └── select_classes.html
+
 ```
