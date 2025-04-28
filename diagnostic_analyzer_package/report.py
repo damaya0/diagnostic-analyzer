@@ -90,7 +90,7 @@ def write_analysis_report(content, report_type, filename=None):
 
 def write_final_report(customer_problem, log_analysis, comprehensive_analysis, class_analysis=None, final_report=None):
     """
-    Writes the final consolidated report as a PDF without using space characters directly.
+    Writes the final consolidated report as a PDF.
     """
     print("\n[INFO] Generating final PDF report...")
     

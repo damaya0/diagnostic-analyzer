@@ -12,11 +12,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diagnostic_analyzer_package.thread_analyzer import analyze_thread_dumps_and_extract_problems, get_comprehensive_thread_analysis
 from diagnostic_analyzer_package.log_analyzer import get_log_content, analyze_error_log, fetch_and_analyze_files
 from diagnostic_analyzer_package.utils import read_package_file
-from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
+from diagnostic_analyzer_package.report import write_final_report
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here_make_this_random_and_secure'  # Required for session
+app.secret_key = '1234567890098765432112345678900987654321'  # Required for session
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Extend session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
@@ -354,9 +354,7 @@ def clean_temp_dir(session_id):
 # Cleanup old session files periodically
 def cleanup_old_session_files():
     """Delete session files older than 2 hours"""
-    import time
-    from datetime import datetime, timedelta
-    
+    import time    
     now = time.time()
     for filename in os.listdir(SESSION_FILE_DIR):
         filepath = os.path.join(SESSION_FILE_DIR, filename)
