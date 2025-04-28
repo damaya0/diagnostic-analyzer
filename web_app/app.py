@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 import sys
 import os
 import json
@@ -12,11 +12,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diagnostic_analyzer_package.thread_analyzer import analyze_thread_dumps_and_extract_problems, get_comprehensive_thread_analysis
 from diagnostic_analyzer_package.log_analyzer import get_log_content, analyze_error_log, fetch_and_analyze_files
 from diagnostic_analyzer_package.utils import read_package_file
-from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 from diagnostic_analyzer_package.report import write_final_report
+from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
 app = Flask(__name__)
-app.secret_key = '1234567890098765432112345678900987654321'  # Required for session
+app.secret_key = 'your_secret_key_here_make_this_random_and_secure'  # Required for session
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Extend session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
@@ -24,6 +24,8 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
 # Create a directory to store session files if it doesn't exist
 os.makedirs(os.path.join(os.path.dirname(__file__), 'session_data'), exist_ok=True)
 SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'session_data')
+REPORTS_DIR = os.path.join(os.path.dirname(__file__), 'reports')
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 # Store temporary directory paths
 temp_dirs = {}
@@ -123,6 +125,25 @@ def analyze():
             'final_report': final_report,
             'class_analysis': None
         }
+        
+        # Generate PDF Report
+        report_path = write_final_report(
+            customer_problem, 
+            log_analysis, 
+            comprehensive_thread_analysis, 
+            class_analysis=None, 
+            final_report=final_report
+        )
+        
+        # Save the report path to access it later
+        unique_report_name = f"{session_id}_final_report.pdf"
+        report_save_path = os.path.join(REPORTS_DIR, unique_report_name)
+        
+        # Copy the report to our reports directory
+        if report_path and os.path.exists(report_path):
+            shutil.copy(report_path, report_save_path)
+            # Add report path to results
+            results['report_path'] = unique_report_name
         
         results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
         with open(results_file, 'wb') as f:
@@ -226,6 +247,23 @@ def analyze_classes():
         class_analysis
     )
     
+    # Generate PDF Report
+    report_path = write_final_report(
+        analysis_data['customer_problem'], 
+        analysis_data['log_analysis'], 
+        analysis_data['comprehensive_thread_analysis'], 
+        class_analysis=class_analysis, 
+        final_report=final_report
+    )
+    
+    # Save the report path to access it later
+    unique_report_name = f"{session_id}_final_report.pdf"
+    report_save_path = os.path.join(REPORTS_DIR, unique_report_name)
+    
+    # Copy the report to our reports directory
+    if report_path and os.path.exists(report_path):
+        shutil.copy(report_path, report_save_path)
+    
     # Store results in a file
     results = {
         'customer_problem': analysis_data['customer_problem'],
@@ -236,7 +274,8 @@ def analyze_classes():
         'log_analysis': analysis_data['log_analysis'],
         'final_report': final_report,
         'class_analysis': class_analysis,
-        'analyzed_classes': selected_classes
+        'analyzed_classes': selected_classes,
+        'report_path': unique_report_name
     }
     
     results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
@@ -282,6 +321,23 @@ def skip_class_analysis():
         print(f"Error generating final report: {e}")
         final_report = "Error generating final diagnostic report."
     
+    # Generate PDF Report
+    report_path = write_final_report(
+        analysis_data['customer_problem'], 
+        analysis_data['log_analysis'], 
+        analysis_data['comprehensive_thread_analysis'], 
+        class_analysis=None, 
+        final_report=final_report
+    )
+    
+    # Save the report path to access it later
+    unique_report_name = f"{session_id}_final_report.pdf"
+    report_save_path = os.path.join(REPORTS_DIR, unique_report_name)
+    
+    # Copy the report to our reports directory
+    if report_path and os.path.exists(report_path):
+        shutil.copy(report_path, report_save_path)
+    
     # Store results in a file
     results = {
         'customer_problem': analysis_data['customer_problem'],
@@ -292,7 +348,8 @@ def skip_class_analysis():
         'log_analysis': analysis_data['log_analysis'],
         'final_report': final_report,
         'class_analysis': None,
-        'analyzed_classes': []  # No classes were analyzed
+        'analyzed_classes': [],  # No classes were analyzed
+        'report_path': unique_report_name
     }
     
     results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
@@ -336,6 +393,15 @@ def results():
     
     return render_template('results.html', results=analysis_results)
 
+@app.route('/download_report/<filename>')
+def download_report(filename):
+    """Download the generated final report"""
+    report_path = os.path.join(REPORTS_DIR, filename)
+    if not os.path.exists(report_path):
+        return render_template('error.html', error="Report file not found. It may have been deleted.")
+    
+    return send_file(report_path, as_attachment=True)
+
 @app.route('/error')
 def error():
     error_message = request.args.get('message', 'An unknown error occurred')
@@ -354,7 +420,9 @@ def clean_temp_dir(session_id):
 # Cleanup old session files periodically
 def cleanup_old_session_files():
     """Delete session files older than 2 hours"""
-    import time    
+    import time
+    from datetime import datetime, timedelta
+    
     now = time.time()
     for filename in os.listdir(SESSION_FILE_DIR):
         filepath = os.path.join(SESSION_FILE_DIR, filename)
@@ -365,6 +433,17 @@ def cleanup_old_session_files():
                     os.remove(filepath)
                 except Exception as e:
                     print(f"Error removing old session file {filepath}: {e}")
+    
+    # Also clean up old reports
+    for filename in os.listdir(REPORTS_DIR):
+        filepath = os.path.join(REPORTS_DIR, filename)
+        if os.path.isfile(filepath):
+            file_modified = os.path.getmtime(filepath)
+            if now - file_modified > 7200:  # 2 hours in seconds
+                try:
+                    os.remove(filepath)
+                except Exception as e:
+                    print(f"Error removing old report file {filepath}: {e}")
 
 # Clean up on startup
 cleanup_old_session_files()
