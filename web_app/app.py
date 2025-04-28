@@ -16,7 +16,7 @@ from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here_make_this_random_and_secure'  # Required for session
+app.secret_key = '12345678901234567890'  # Required for session
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Extend session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
@@ -208,7 +208,7 @@ def analyze_classes():
             if sus_class.get('class') in selected_class_names:
                 selected_classes.append(sus_class)
     else:
-        # If they're just strings (shouldn't happen with the original code but just in case)
+        # If they're just strings
         print(f"WARNING: suspected_classes are not in dictionary format: {original_suspected_classes}")
         # Create mock dictionaries for the selected classes
         for class_name in selected_class_names:
@@ -421,7 +421,6 @@ def clean_temp_dir(session_id):
 def cleanup_old_session_files():
     """Delete session files older than 2 hours"""
     import time
-    from datetime import datetime, timedelta
     
     now = time.time()
     for filename in os.listdir(SESSION_FILE_DIR):
