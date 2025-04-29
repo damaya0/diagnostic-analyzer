@@ -139,7 +139,7 @@ def main():
                         classes_to_analyze = []
                 
                 if classes_to_analyze:
-                    class_analysis = fetch_and_analyze_files(classes_to_analyze, customer_problem, error_message)
+                    class_analysis = fetch_and_analyze_files(classes_to_analyze, customer_problem, error_message, log_analysis)
                     pretty_print("Class analysis completed.", "success")
                 else:
                     pretty_print("No classes selected for analysis.", "info")

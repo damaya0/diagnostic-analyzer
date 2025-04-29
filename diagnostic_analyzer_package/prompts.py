@@ -64,7 +64,6 @@ def get_comprehensive_thread_analysis_prompt(customer_problem, initial_response,
     """
     return comprehensive_prompt
 
-
 def get_log_analysis_prompt(customer_problem, log_content, sus_classes):
     # Create a prompt for log analysis
     log_analysis_prompt = f"""
@@ -87,8 +86,9 @@ def get_log_analysis_prompt(customer_problem, log_content, sus_classes):
        - Component failures
     3. Provide a summary of your findings
     4. Decide what classes you would analyze further to get a better idea about the issue, give a list of dictionaries of suspected Java classes with package names and line numbers that might be involved in the issues (limit to top 5 classes) example :-
-       SUSPECTED_CLASSES: {sus_classes}
-       ensure that the SUSPECTED_CLASSES strictly obey the format curly bracket dictionaries inside one square bracket pair
+       SUSPECTED_CLASSES: {sus_classes}. 
+       **If you think there are no classes to be suspected, then provide an empty list.**
+       ensure that the SUSPECTED_CLASSES strictly obey the format curly bracket dictionaries inside one square bracket pair.
     5. Also given that another llm call will do a futher analysis with the java classes, provide the error message to be given in that llm call. It should be in the format:
          ERROR_MESSAGE: "error message"
 
@@ -97,13 +97,16 @@ def get_log_analysis_prompt(customer_problem, log_content, sus_classes):
     """
     return log_analysis_prompt
 
-def get_class_analysis_prompt(customer_problem, class_files_content, error_message_text):
+def get_class_analysis_prompt(customer_problem, class_files_content, error_message_text, log_analysis):
     # Create a prompt for class file analysis
     class_analysis_prompt = f"""
     # You are a software engineer at wso2 and you are analyzing Java class files related to the following customer problem to identify potential issues.
     
     ## Customer Problem
     {customer_problem}
+
+    ## Initial Log Analysis
+    {log_analysis}
     
     ## Identified issue in the logs
     {error_message_text}
@@ -114,7 +117,7 @@ def get_class_analysis_prompt(customer_problem, class_files_content, error_messa
     {json.dumps(class_files_content, indent=2)}
     
     ## Analysis Request
-    1. Analyze these class files to identify potential issues related to the customer problem
+    1. Analyze these class files to identify potential issues related to the customer problem and initial log analysis. If you think there is no need to analyze the class files, then provide a message saying that.
     2. Look for:
        - Design flaws
        - Error handling issues
@@ -123,6 +126,8 @@ def get_class_analysis_prompt(customer_problem, class_files_content, error_messa
        - Any other code smells or anti-patterns
     3. Provide a detailed analysis for each class
     4. Suggest specific improvements or fixes
+
+    **Kepp the analysis to a precise and concise format.**
 
     ## Important Note
     Note that your response will be directly written into a pdf report, so please ensure to fromat your response accordingly. **Do not leave indentation spaces in the response**. Start all sentences at the begining of a newline.

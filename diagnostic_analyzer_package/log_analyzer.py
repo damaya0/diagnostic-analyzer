@@ -124,7 +124,7 @@ def extract_error_message(log_analysis):
     return ""
     
 # Function to fetch and analyze class files
-def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_text):
+def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_text, log_analysis):
     """
     Fetches the specified class files from GitHub and analyzes them.
     
@@ -154,7 +154,7 @@ def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_t
 
         class_files_content[filename] = f"// Content in {filename}\n// {file_content_with_line_number} \n// Line number with the issue: {line_number}\n"
     
-    class_analysis_prompt = get_class_analysis_prompt(customer_problem, class_files_content, error_message_text)
+    class_analysis_prompt = get_class_analysis_prompt(customer_problem, class_files_content, error_message_text, log_analysis)
     
     try:
         class_analysis = call_chatgpt_api(class_analysis_prompt)

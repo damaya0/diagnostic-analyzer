@@ -63,11 +63,10 @@ def call_chatgpt_api(prompt):
 
     try:
         response = openai.chat.completions.create(
-            model="o3-mini",  # Or another suitable model
+            model="o3-mini", 
             messages=[
                 {"role": "user", "content": prompt}
             ],
-            # max_tokens=8500
         )
         return response.choices[0].message.content
     except Exception as e:
