@@ -177,7 +177,11 @@ def select_classes():
     return render_template('select_classes.html', 
                           suspected_classes=analysis_data.get('suspected_classes', []),
                           class_count=len(analysis_data.get('suspected_classes', [])),
-                          session_id=session_id)
+                          session_id=session_id,
+                          # Pass the report data needed for display
+                          comprehensive_thread_analysis=analysis_data.get('comprehensive_thread_analysis'),
+                          problem_threads=analysis_data.get('problem_threads', []),
+                          log_analysis=analysis_data.get('log_analysis'))
 
 @app.route('/analyze_classes', methods=['POST'])
 def analyze_classes():
