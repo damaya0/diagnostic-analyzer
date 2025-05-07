@@ -152,7 +152,7 @@ def get_diagnostic_conclusion_prompt(customer_problem, log_analysis, comprehensi
     
     Please provide:
     1. A clear diagnosis of the root cause. Be specific and concise.
-    2. Specific actionable steps to resolve the issue
+    2. Specific actionable steps to resolve the issue. If applicable, specially mention if we can try increasing any thread pool sizes.
 
      ## Important Note
     Note that your response will be directly written into a pdf report, so please ensure to fromat your response accordingly. **Do not leave indentation spaces in the response**. Start all sentences at the begining of a newline.

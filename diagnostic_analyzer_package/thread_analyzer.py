@@ -104,14 +104,13 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, folder_path,
             short_initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content[:600000])
             initial_response = call_chatgpt_api(short_initial_prompt)
 
-        # Save the initial report
-        # Save the initial report using write_analysis_report
-        pdf_path, initial_response = write_analysis_report(
-            initial_response, 
-            'Initial Thread Dump Analysis', 
-            'initial_thread_dump_analysis.pdf'
-        )
-        print(f"[INFO] Initial thread dump analysis completed and saved to '{pdf_path}'")
+        # # Save the initial report using write_analysis_report
+        # initial_response = write_analysis_report(
+        #     initial_response, 
+        #     'Initial Thread Dump Analysis', 
+        #     'initial_thread_dump_analysis.pdf'
+        # )
+        # print(f"[INFO] Initial thread dump analysis completed and saved")
         
         # Extract problem threads from the response
         problem_threads = extract_problem_threads(initial_response)
@@ -196,12 +195,12 @@ def get_comprehensive_thread_analysis(initial_response, problem_threads, custome
     try:
         comprehensive_analysis = call_chatgpt_api(comprehensive_prompt)
         
-        # Generate PDF report and also save text version
-        pdf_path, comprehensive_analysis = write_analysis_report(
-            comprehensive_analysis, 
-            'Thread Analysis', 
-            'comprehensive_thread_analysis.pdf'
-        )
+        # # Generate PDF report and also save text version
+        # comprehensive_analysis = write_analysis_report(
+        #     comprehensive_analysis, 
+        #     'Thread Analysis', 
+        #     'comprehensive_thread_analysis.pdf'
+        # )
         
         return comprehensive_analysis
         

@@ -17,6 +17,12 @@ The Diagnostic Analyzer Tool is a comprehensive utility for troubleshooting WSO2
 - **Comprehensive Report Generation** with diagnostic conclusions
 - **Configurable Thread Groups** for customized analysis
 
+## 🏗️ Architecture
+
+The Diagnostic Analyzer Tool follows a modular architecture designed for flexibility and extensibility:
+
+![Architecture Diagram](screenshots/architecture.png)
+
 ### Requirements
 
 - Python 3.8 or higher

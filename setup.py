@@ -11,9 +11,4 @@ setup(
     install_requires=[
         'openai',
     ],
-    entry_points={
-        'console_scripts': [
-            'diagnostic_analyzer=diagnostic_analyzer_package.main:main',
-        ],
-    },
 )

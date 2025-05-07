@@ -81,8 +81,6 @@ class Analysis:
             # Thread header contains a thread ID => we think it's complete 
             return False
         if line[-2:] == '":':
-            # Thread headers ending in ": are complete as seen in the example here:
-            # https://github.com/spotify/threaddump-analyzer/issues/12
             return False
         return True
 
@@ -201,7 +199,6 @@ class Analysis:
             if status.severity == 0:
                 continue
             if self.deadlockStatus['severity'] < status['severity']:
-                # TODO: use compareTo which also takes into account other factors
                 self.deadlockStatus = status
             synchronizer.deadlockStatus = status
 

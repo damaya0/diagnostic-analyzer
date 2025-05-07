@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, session, redirect, send_file
 import sys
 import os
 import json
@@ -16,12 +16,12 @@ from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
 app = Flask(__name__)
-app.secret_key = '12345678901234567890'  # Required for session
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Extend session lifetime
+app.secret_key = '12345678901234567890'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
 
-# Create a directory to store session files if it doesn't exist
+# Create a directory to store session files
 os.makedirs(os.path.join(os.path.dirname(__file__), 'session_data'), exist_ok=True)
 SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'session_data')
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), 'reports')
@@ -32,7 +32,7 @@ temp_dirs = {}
 
 @app.route('/')
 def index():
-    # Make session permanent with the configured lifetime
+    # Make session permanent
     session.permanent = True
     return render_template('index.html')
 
@@ -45,7 +45,6 @@ def analyze():
     if 'diagnostic_files' not in request.files:
         return jsonify({"error": "No files uploaded"}), 400
     
-    # Create a temporary directory to store uploaded files
     temp_dir = tempfile.mkdtemp()
     
     # Generate a unique session ID
@@ -54,7 +53,7 @@ def analyze():
     temp_dirs[session_id] = temp_dir
     session['session_id'] = session_id
     
-    # Save all uploaded files to the temp directory
+    # Save uploaded files to the temp directory
     files = request.files.getlist('diagnostic_files')
     for file in files:
         file.save(os.path.join(temp_dir, file.filename))
@@ -97,7 +96,7 @@ def analyze():
         'comprehensive_thread_analysis': comprehensive_thread_analysis,
         'log_analysis': log_analysis,
         'error_message': error_message,
-        'temp_dir': temp_dir  # Store the temp directory path
+        'temp_dir': temp_dir
     }
     
     # Save analysis data to a file

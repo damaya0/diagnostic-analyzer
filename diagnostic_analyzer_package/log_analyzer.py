@@ -59,12 +59,12 @@ def analyze_error_log(log_content, customer_problem):
     try:
         log_analysis = call_chatgpt_api(log_analysis_prompt)
         
-        # Generate PDF report and also save text version
-        pdf_path, log_analysis = write_analysis_report(
-            log_analysis, 
-            'Log Analysis', 
-            'log_analysis_report.pdf'
-        )
+        # # Generate PDF report and also save text version
+        # log_analysis = write_analysis_report(
+        #     log_analysis, 
+        #     'Log Analysis', 
+        #     'log_analysis_report.pdf'
+        # )
         
         # Extract suspected classes from the response
         suspected_classes = extract_suspected_classes(log_analysis)
@@ -159,12 +159,12 @@ def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_t
     try:
         class_analysis = call_chatgpt_api(class_analysis_prompt)
         
-        # Generate PDF report and also save text version
-        pdf_path, class_analysis = write_analysis_report(
-            class_analysis, 
-            'Class Analysis', 
-            'class_analysis_report.pdf'
-        )
+        # # Generate PDF report and also save text version
+        # class_analysis = write_analysis_report(
+        #     class_analysis, 
+        #     'Class Analysis', 
+        #     'class_analysis_report.pdf'
+        # )
         
         return class_analysis
         
