@@ -39,7 +39,26 @@
             "name": "SynapseWorker",
             "poolName": "SynapseWorker",
             "threadCount": 100
+        },
+        {
+            "name": "Nio Event LoopGroup",
+            "poolName": "nioEventLoopGroup",
+            "threadCount": 10
+        },
+        {
+            "name": "Quartz Scheduler",
+            "poolName": "QuartzScheduler_QuartzSchedulerThread",
+            "threadCount": 1000
+        },
+        {
+            "name": "HL7TransportListener",
+            "poolName": "HL7TransportListener",
+            "threadCount": 200
+        },
+        {
+            "name": "endpoint-jmx-stat-collector",
+            "poolName": "endpoint-jmx-stat-collector",
+            "threadCount": 20
         }
-        
     ]
 }
