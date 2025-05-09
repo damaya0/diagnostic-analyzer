@@ -72,12 +72,12 @@ def analyze():
     # Get log content
     log_content = get_log_content(temp_dir)
     
-    # Comprehensive thread analysis
-    comprehensive_thread_analysis = "Not applicable - no problematic threads identified."
     if problem_threads:
         comprehensive_thread_analysis = get_comprehensive_thread_analysis(
             thread_analysis, problem_threads, customer_problem, log_content
         )
+    else:
+        comprehensive_thread_analysis = "Not applicable - no problematic threads identified."
     
     # Log analysis
     log_analysis = "No log content available for analysis."
