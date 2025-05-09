@@ -1,6 +1,6 @@
 import json
 
-def get_initial_thread_analysis_prompt(customer_problem, combined_content):
+def get_initial_thread_analysis_prompt(customer_problem, combined_content, thread_groups_config):
 
     initial_prompt = f"""
     # Thread Dump Analysis Request
@@ -12,6 +12,11 @@ def get_initial_thread_analysis_prompt(customer_problem, combined_content):
     The following contains thread dumps taken when the issue occurred:
     
     {combined_content}
+
+    ## Thread Group Configuration
+   The following dictionary contains the thread group configurations of the micro integrator:
+   {thread_groups_config}
+   you can use this to get an idea about how many threads can be in each thread group without causing an issue.
     
     ## Analysis Request
     1. Analyze these thread dumps to identify potential issues

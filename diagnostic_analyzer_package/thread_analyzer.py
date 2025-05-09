@@ -97,7 +97,7 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, folder_path,
     try:
         # Call the API for initial analysis
         print("\n[INFO] Performing initial thread dump analysis...")
-        initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content)
+        initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content, thread_groups_config)
         initial_response = call_chatgpt_api(initial_prompt)
         if "context_length_exceeded" in initial_response:
             print("Context length exceeded. Trying with a smaller context.")

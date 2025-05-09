@@ -22,8 +22,6 @@ class Analysis:
         self._countRunningMethods()
         self._analyzeSynchronizers()
         self._analyzeDeadlocks()
-        # must sort after deadlock detection
-        # self.synchronizers.sort(key=lambda x: x.compare())
 
     def _init(self):
         self.threads = []
@@ -69,11 +67,11 @@ class Analysis:
     def _isIncompleteThreadHeader(self, line):
         if line:  # Check if the line is not empty
             if line[0] != '"':
-            # Thread headers start with ", this is not it 
+            # Thread headers start with "
                 return False
         else:
             return False
-        #possible error. check this if code misses 
+        
         if 'prio=' in line:
             # Thread header contains "prio=" => we think it's complete 
             return False
@@ -85,7 +83,6 @@ class Analysis:
         return True
 
     def _handleLine(self, line):
-        # TODO better way of new thread detection than creating a new object
         thread = Thread(line)
         if thread.isValid():
             self.threads.append(thread)
@@ -153,7 +150,6 @@ class Analysis:
     def _analyzeSynchronizers(self):
         self._mapSynchronizers()
         self._xrefSynchronizers()
-        self._sortSynchronizersRefs()
 
     def _mapSynchronizers(self):
         for thread in self.threads:
@@ -186,13 +182,6 @@ class Analysis:
                 synchronizer = self.synchronizerMap[lock]
                 synchronizer.lockHolder = thread
 
-    def _sortSynchronizersRefs(self):
-        for synchronizer in self.synchronizers:
-            # synchronizer.lockWaiters.sort(key=self.threadComparator)
-            # synchronizer.notificationWaiters.sort(key=self.threadComparator)
-            #possible error
-            pass
-
     def _analyzeDeadlocks(self):
         for synchronizer in self.synchronizers:
             status = self._determineDeadlockStatus(synchronizer)
@@ -215,6 +204,7 @@ class Analysis:
         if len(sync.lockWaiters) == 0 and len(sync.notificationWaiters) == 0:
             return DeadlockStatus.NONE
         
+        #Cycle Detection
         work = []
         work.append(sync.lockHolder)
         visited = {sync.id: True}
@@ -230,17 +220,17 @@ class Analysis:
                 if synchro.lockHolder is not None:
                     work.append(synchro.lockHolder)
         
-        return DeadlockStatus(DeadlockStatus.DEADLOCKED, [])
-
+        return DeadlockStatus.NONE
 
 class Thread:
     def __init__(self, spec):
+        # Initial property declarations
         self.spec = spec
         self.threadState = None
         self.wantNotificationOn = None
         self.classicalLockHeld = None
         self.name = None
-        self.tid = None  # Assuming tid is set elsewhere
+        self.tid = None  
         self.frames = []
         self.synchronizerClasses = {}
         self.wantToAcquire = None
@@ -255,14 +245,6 @@ class Thread:
         
         # Initialize the object
         self._parseSpec(spec)
-
-        self.frames = []
-        self.wantNotificationOn = None
-        self.wantToAcquire = None
-        self.locksHeld = []
-        self.synchronizerClasses = {}
-        self.threadState = None
-        self.classicalLockHeld = None
 
     def isValid(self):
         return hasattr(self, 'name') and self.name is not None
@@ -289,7 +271,7 @@ class Thread:
             self.synchronizerClasses[id] = className
 
             if state == "eliminated":
-                return True  # JVM internal optimization, not sure why it's in the thread dump at all
+                return True  
             elif state in ["waiting on", "parking to wait for"]:
                 self.wantNotificationOn = id
                 return True
@@ -299,7 +281,6 @@ class Thread:
             elif state == "locked":
                 if self.wantNotificationOn == id:
                     return True  # Lock is released while waiting for the notification
-                # self._arrayAddUnique(self.locksHeld, id)
                 Util.array_add_unique(self.locksHeld, id)
                 if (len(self.frames) >= 2 and self.classicalLockHeld is None and
                     'java.lang.Object.wait' in self.frames[-2]):
@@ -340,7 +321,6 @@ class Thread:
             self.classicalLockHeld = None
 
     def getStatus(self):
-        # TODO: do not recreate every time
         return ThreadStatus(self)
 
     def _parseSpec(self, line):

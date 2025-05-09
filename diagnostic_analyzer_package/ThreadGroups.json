@@ -3,22 +3,22 @@
         {
             "name": "HTTP Sender pool",
             "poolName": "HTTP-Sender I/O dispatcher",
-            "threadCount": 200
+            "threadCount": "200 for all senders and listners"
         },
         {
             "name": "HTTPS Sender pool",
             "poolName": "HTTPS-Sender I/O dispatcher",
-            "threadCount": 200
+            "threadCount": "200 for all senders and listners"
         },
         {
             "name": "HTTP listner pool",
             "poolName": "HTTP-Listener I/O dispatcher",
-            "threadCount": 200
+            "threadCount": "200 for all senders and listners"
         },
         {
             "name": "HTTPS listner pool",
             "poolName": "HTTPS-Listener I/O dispatcher",
-            "threadCount": 200
+            "threadCount": "200 for all senders and listners"
         },
         {
             "name": "Timer",
