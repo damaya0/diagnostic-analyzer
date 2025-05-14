@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+from dotenv import load_dotenv
 import sys
 import os
 import json
@@ -16,10 +17,14 @@ from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
 app = Flask(__name__)
+# Load environment variables from .env file
+load_dotenv()
 app.secret_key = '12345678901234567890'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
+app.config['GITHUB_API_KEY'] = os.getenv('GITHUB_API_KEY')
+app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 # Create a directory to store session files
 os.makedirs(os.path.join(os.path.dirname(__file__), 'session_data'), exist_ok=True)
@@ -235,7 +240,8 @@ def analyze_classes():
             class_analysis = fetch_and_analyze_files(
                 selected_classes,  # Now this is a list of dictionaries
                 analysis_data['customer_problem'], 
-                analysis_data.get('error_message', '')
+                analysis_data.get('error_message', ''),
+                analysis_data['log_analysis']
             )
         except Exception as e:
             import traceback
@@ -450,5 +456,5 @@ def cleanup_old_session_files():
 # Clean up on startup
 cleanup_old_session_files()
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

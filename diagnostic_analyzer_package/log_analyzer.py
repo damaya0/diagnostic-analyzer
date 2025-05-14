@@ -5,7 +5,6 @@ import ast
 import re
 
 from .utils import call_chatgpt_api
-from .report import write_analysis_report
 from .prompts import get_log_analysis_prompt, get_class_analysis_prompt
 
 #Function to retrieve content from log.txt file inside the folder

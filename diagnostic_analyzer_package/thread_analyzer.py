@@ -4,7 +4,6 @@ import json
 
 from .utils import process_output_to_string, call_chatgpt_api
 from .prompts import get_initial_thread_analysis_prompt, get_comprehensive_thread_analysis_prompt
-from .report import write_analysis_report
 from .thread_dump_processor import Analysis, ThreadStatus
 
 # Function to analyze multiple thread dumps
