@@ -2,6 +2,9 @@ import pkgutil
 import openai
 import textwrap
 import os
+import time
+import shutil
+from datetime import datetime, timedelta, timezone
 
 # Pretty print function for CLI output
 def pretty_print(message, type_="info"):
@@ -158,3 +161,35 @@ def draw_wrapped_text(canvas, text, x, y, width, bottom_margin, height, top_marg
         y -= line_height
     
     return y
+
+def cleanup_old_data(memory_store, data_timestamps):
+    """Remove data older than 2 hours from memory_store"""
+    current_time = datetime.now(timezone.utc)
+    expired_sessions = []
+    
+    for session_id, timestamp in data_timestamps.items():
+        if current_time - timestamp > timedelta(hours=2):
+            expired_sessions.append(session_id)
+    
+    for session_id in expired_sessions:
+        if session_id in memory_store['analysis_data']:
+            del memory_store['analysis_data'][session_id]
+        if session_id in memory_store['results']:
+            del memory_store['results'][session_id]
+        del data_timestamps[session_id]
+
+def cleanup_thread(memory_store, data_timestamps):
+    """Background thread to clean up old data"""
+    while True:
+        cleanup_old_data(memory_store, data_timestamps)
+        time.sleep(3600)  # Run once per hour
+
+def clean_temp_dir(session_id, temp_dirs):
+    """Clean up temporary directory"""
+    if session_id in temp_dirs:
+        try:
+            if os.path.exists(temp_dirs[session_id]):
+                shutil.rmtree(temp_dirs[session_id])
+            del temp_dirs[session_id]
+        except Exception as e:
+            print(f"Error cleaning up temporary directory: {e}")

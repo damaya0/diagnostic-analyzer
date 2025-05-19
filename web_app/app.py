@@ -5,21 +5,22 @@ import os
 import json
 import tempfile
 import shutil
-import pickle
-from datetime import timedelta
+import uuid
+import threading
+from datetime import datetime, timedelta, timezone
 
 # Add the parent directory to the path so we can import the diagnostic package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diagnostic_analyzer_package.thread_analyzer import analyze_thread_dumps_and_extract_problems, get_comprehensive_thread_analysis
 from diagnostic_analyzer_package.log_analyzer import get_log_content, analyze_error_log, fetch_and_analyze_files
-from diagnostic_analyzer_package.utils import read_package_file
+from diagnostic_analyzer_package.utils import read_package_file, cleanup_thread, clean_temp_dir
 from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
 app = Flask(__name__)
 # Load environment variables from .env file
 load_dotenv()
-app.secret_key = '12345678901234567890'
+app.secret_key = '12345678901234567890' ##env
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)  # Session lifetime
 app.config['SESSION_TYPE'] = 'filesystem'  # Store sessions on server filesystem instead of cookies
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
@@ -28,12 +29,27 @@ app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 # Create a directory to store session files
 os.makedirs(os.path.join(os.path.dirname(__file__), 'session_data'), exist_ok=True)
-SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'session_data')
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), 'reports')
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
+# This will serve as our database
+memory_store = {
+    'analysis_data': {},  # Indexed by session_id
+    'results': {}         # Indexed by session_id
+}
+
+# Store timestamps of when data was added
+data_timestamps = {}
+
 # Store temporary directory paths
 temp_dirs = {}
+
+# Load thread groups configuration
+thread_groups_config = json.loads(read_package_file('ThreadGroups.json'))
+
+# Start the cleanup thread when the app starts
+cleanup_thread_instance = threading.Thread(target=cleanup_thread,args=(memory_store, data_timestamps), daemon=True)
+cleanup_thread_instance.start()
 
 @app.route('/')
 def index():
@@ -53,7 +69,6 @@ def analyze():
     temp_dir = tempfile.mkdtemp()
     
     # Generate a unique session ID
-    import uuid
     session_id = str(uuid.uuid4())
     temp_dirs[session_id] = temp_dir
     session['session_id'] = session_id
@@ -62,12 +77,6 @@ def analyze():
     files = request.files.getlist('diagnostic_files')
     for file in files:
         file.save(os.path.join(temp_dir, file.filename))
-    
-    # Load thread groups configuration
-    try:
-        thread_groups_config = json.loads(read_package_file('ThreadGroups.json'))
-    except Exception as error:
-        return jsonify({"error": f"Failed to read ThreadGroups.json: {error}"}), 500
     
     # Analyze thread dumps
     thread_analysis, problem_threads = analyze_thread_dumps_and_extract_problems(
@@ -104,11 +113,10 @@ def analyze():
         'temp_dir': temp_dir
     }
     
-    # Save analysis data to a file
-    data_file = os.path.join(SESSION_FILE_DIR, f"{session_id}.pkl")
-    with open(data_file, 'wb') as f:
-        pickle.dump(analysis_data, f)
-    
+    # Store in memory_store and update timestamp
+    memory_store['analysis_data'][session_id] = analysis_data
+    data_timestamps[session_id] = datetime.now(timezone.utc)
+
     # If there are suspected classes, redirect to class selection
     if suspected_classes:
         return jsonify({"success": True, "redirect": f"/select_classes?session_id={session_id}"})
@@ -129,32 +137,13 @@ def analyze():
             'final_report': final_report,
             'class_analysis': None
         }
-        
-        # Generate PDF Report
-        report_path = write_final_report(
-            customer_problem, 
-            log_analysis, 
-            comprehensive_thread_analysis, 
-            class_analysis=None, 
-            final_report=final_report
-        )
-        
-        # Save the report path to access it later
-        unique_report_name = f"{session_id}_final_report.pdf"
-        report_save_path = os.path.join(REPORTS_DIR, unique_report_name)
-        
-        # Copy the report to our reports directory
-        if report_path and os.path.exists(report_path):
-            shutil.copy(report_path, report_save_path)
-            # Add report path to results
-            results['report_path'] = unique_report_name
-        
-        results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
-        with open(results_file, 'wb') as f:
-            pickle.dump(results, f)
-        
+
+        # Store in memory_store and update timestamp
+        memory_store['results'][session_id] = results
+        data_timestamps[session_id] = datetime.now(timezone.utc)
+
         # Clean up temporary directory
-        clean_temp_dir(session_id)
+        clean_temp_dir(session_id, temp_dirs)
         
         return jsonify({"success": True, "redirect": f"/results?session_id={session_id}"})
 
@@ -167,13 +156,11 @@ def select_classes():
     if not session_id:
         return render_template('error.html', error="Session expired or invalid. Please start a new analysis.")
     
-    # Load analysis data from file
-    data_file = os.path.join(SESSION_FILE_DIR, f"{session_id}.pkl")
-    try:
-        with open(data_file, 'rb') as f:
-            analysis_data = pickle.load(f)
-    except (FileNotFoundError, pickle.PickleError):
-        return render_template('error.html', error="Session data not found. Please start a new analysis.")
+    # Get analysis data from memory
+    analysis_data = memory_store['analysis_data'][session_id]
+    
+    # Update timestamp to indicate recent access
+    data_timestamps[session_id] = datetime.now(timezone.utc)
     
     # Store session ID in session for future requests
     session['session_id'] = session_id
@@ -182,7 +169,6 @@ def select_classes():
                           suspected_classes=analysis_data.get('suspected_classes', []),
                           class_count=len(analysis_data.get('suspected_classes', [])),
                           session_id=session_id,
-                          # Pass the report data needed for display
                           comprehensive_thread_analysis=analysis_data.get('comprehensive_thread_analysis'),
                           problem_threads=analysis_data.get('problem_threads', []),
                           log_analysis=analysis_data.get('log_analysis'))
@@ -194,15 +180,10 @@ def analyze_classes():
     if not session_id:
         return jsonify({"error": "Session expired or invalid"}), 400
     
-    # Load analysis data from file
-    data_file = os.path.join(SESSION_FILE_DIR, f"{session_id}.pkl")
-    try:
-        with open(data_file, 'rb') as f:
-            analysis_data = pickle.load(f)
-    except (FileNotFoundError, pickle.PickleError):
-        return jsonify({"error": "Session data not found"}), 400
+    # Get analysis data from memory
+    analysis_data = memory_store['analysis_data'][session_id]
     
-    # Get selected classes (just the names)
+    # Get selected classes
     selected_class_names = request.form.getlist('selected_classes')
     
     # Find the full class objects from the original suspected_classes
@@ -287,15 +268,14 @@ def analyze_classes():
         'report_path': unique_report_name
     }
     
-    results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
-    with open(results_file, 'wb') as f:
-        pickle.dump(results, f)
+    # Store in memory_store and update timestamp
+    memory_store['results'][session_id] = results
+    data_timestamps[session_id] = datetime.now(timezone.utc)
     
     # Clean up temporary directory and analysis data file
     try:
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        os.remove(data_file)
     except Exception as e:
         print(f"Error cleaning up: {e}")
     
@@ -310,13 +290,8 @@ def skip_class_analysis():
     if not session_id:
         return render_template('error.html', error="Session expired or invalid. Please start a new analysis.")
     
-    # Load analysis data from file
-    data_file = os.path.join(SESSION_FILE_DIR, f"{session_id}.pkl")
-    try:
-        with open(data_file, 'rb') as f:
-            analysis_data = pickle.load(f)
-    except (FileNotFoundError, pickle.PickleError):
-        return render_template('error.html', error="Session data not found. Please start a new analysis.")
+    # Get analysis data from memory
+    analysis_data = memory_store['analysis_data'][session_id]
     
     # Generate final report without class analysis
     try:
@@ -361,16 +336,15 @@ def skip_class_analysis():
         'report_path': unique_report_name
     }
     
-    results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
-    with open(results_file, 'wb') as f:
-        pickle.dump(results, f)
+    # Store in memory_store and update timestamp
+    memory_store['results'][session_id] = results
+    data_timestamps[session_id] = datetime.now(timezone.utc)
     
     # Clean up the temp directory and analysis data file
     try:
         temp_dir = analysis_data.get('temp_dir')
         if temp_dir and os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        os.remove(data_file)
     except Exception as e:
         print(f"Error cleaning up: {e}")
     
@@ -386,19 +360,11 @@ def results():
     if not session_id:
         return render_template('error.html', error="Session expired or invalid. Please start a new analysis.")
     
-    # Load results from file
-    results_file = os.path.join(SESSION_FILE_DIR, f"{session_id}_results.pkl")
-    try:
-        with open(results_file, 'rb') as f:
-            analysis_results = pickle.load(f)
-    except (FileNotFoundError, pickle.PickleError):
-        return render_template('error.html', error="Results not found. Please start a new analysis.")
+    # Get results from memory
+    analysis_results = memory_store['results'][session_id]
     
-    # Clean up results file after reading
-    try:
-        os.remove(results_file)
-    except Exception as e:
-        print(f"Error removing results file: {e}")
+    # Update timestamp
+    data_timestamps[session_id] = datetime.now(timezone.utc)
     
     return render_template('results.html', results=analysis_results)
 
@@ -416,33 +382,24 @@ def error():
     error_message = request.args.get('message', 'An unknown error occurred')
     return render_template('error.html', error=error_message)
 
-def clean_temp_dir(session_id):
-    """Clean up temporary directory"""
-    if session_id in temp_dirs:
-        try:
-            if os.path.exists(temp_dirs[session_id]):
-                shutil.rmtree(temp_dirs[session_id])
-            del temp_dirs[session_id]
-        except Exception as e:
-            print(f"Error cleaning up temporary directory: {e}")
+# Clean up on app shutdown
+@app.teardown_appcontext
+def cleanup_on_shutdown(exception=None):
+    """Clean up temp directories on app shutdown"""
+    for session_id in memory_store['analysis_data']:
+        temp_dir = memory_store['analysis_data'][session_id].get('temp_dir')
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                print(f"Error cleaning temp dir: {e}")
 
-# Cleanup old session files periodically
-def cleanup_old_session_files():
+# Cleanup old report files periodically
+def cleanup_old_report_files():
     """Delete session files older than 2 hours"""
     import time
-    
     now = time.time()
-    for filename in os.listdir(SESSION_FILE_DIR):
-        filepath = os.path.join(SESSION_FILE_DIR, filename)
-        if os.path.isfile(filepath):
-            file_modified = os.path.getmtime(filepath)
-            if now - file_modified > 7200:  # 2 hours in seconds
-                try:
-                    os.remove(filepath)
-                except Exception as e:
-                    print(f"Error removing old session file {filepath}: {e}")
-    
-    # Also clean up old reports
+
     for filename in os.listdir(REPORTS_DIR):
         filepath = os.path.join(REPORTS_DIR, filename)
         if os.path.isfile(filepath):
@@ -454,7 +411,7 @@ def cleanup_old_session_files():
                     print(f"Error removing old report file {filepath}: {e}")
 
 # Clean up on startup
-cleanup_old_session_files()
+cleanup_old_report_files()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

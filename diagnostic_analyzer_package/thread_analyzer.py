@@ -21,7 +21,7 @@ def analyze_thread_dumps(thread_groups_config, folder_path):
         matching_files = [f for f in os.listdir(folder_path) if pattern.match(f)]
         
         if not matching_files:
-            print(f"No thread dump files found matching pattern threaddump-{i}-*.txt")
+            print(f"No thread dump files found matching pattern threaddump-{i}-*.txt") #TODO:logs
             continue
             
         thread_dump_filename = matching_files[0]
