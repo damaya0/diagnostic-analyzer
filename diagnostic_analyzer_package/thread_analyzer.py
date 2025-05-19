@@ -7,7 +7,7 @@ from .prompts import get_initial_thread_analysis_prompt, get_comprehensive_threa
 from .thread_dump_processor import Analysis, ThreadStatus
 
 # Function to analyze multiple thread dumps
-def analyze_thread_dumps(thread_groups_config, folder_path):
+def analyze_thread_dumps(thread_groups_config, in_memory_files):
     """
     Analyzes multiple thread dump files and combines the results into a single output file.
 
@@ -18,7 +18,7 @@ def analyze_thread_dumps(thread_groups_config, folder_path):
     for i in range(1, 4):
 
         pattern = re.compile(rf"threaddump-{i}-\d+\.txt")
-        matching_files = [f for f in os.listdir(folder_path) if pattern.match(f)]
+        matching_files = [f for f in in_memory_files.keys() if pattern.match(f)]
         
         if not matching_files:
             print(f"No thread dump files found matching pattern threaddump-{i}-*.txt") #TODO:logs
@@ -26,15 +26,30 @@ def analyze_thread_dumps(thread_groups_config, folder_path):
             
         thread_dump_filename = matching_files[0]
         print(thread_dump_filename)
-
-        thread_dump_filepath = os.path.join(folder_path, thread_dump_filename) #create the full file path.
-
-        try:
-            with open(thread_dump_filepath, 'r', encoding='utf-8') as f:
-                thread_dump_text = f.read()
-        except Exception as error:
-            print(f"Failed to read {thread_dump_filename}: {error}")
-            continue
+        
+        # Get file content directly from in_memory_files
+        file_content = in_memory_files[thread_dump_filename]
+        
+        # Handle different types of file content
+        if hasattr(file_content, 'read'):
+            # If it's a file-like object (BytesIO, etc.)
+            file_content.seek(0)  # Ensure we're at the start of the file
+            if hasattr(file_content, 'getvalue'):
+                # BytesIO object
+                thread_dump_text = file_content.getvalue()
+            else:
+                # Other file-like object
+                thread_dump_text = file_content.read()
+                file_content.seek(0)  # Reset position after reading
+                
+            # Convert bytes to string if needed
+            if isinstance(thread_dump_text, bytes):
+                thread_dump_text = thread_dump_text.decode('utf-8', errors='ignore')
+        else:
+            # If it's already a string or bytes
+            thread_dump_text = file_content
+            if isinstance(thread_dump_text, bytes):
+                thread_dump_text = thread_dump_text.decode('utf-8', errors='ignore')
 
         analysis_id = i
         analysis_name = f"Thread Dump Analysis {i}"
@@ -76,7 +91,7 @@ def analyze_thread_dumps(thread_groups_config, folder_path):
     return combined_content
 
 # Function to analyze thread dumps and extract problematic threads
-def analyze_thread_dumps_and_extract_problems(thread_groups_config, folder_path, customer_problem):
+def analyze_thread_dumps_and_extract_problems(thread_groups_config, in_memory_files, customer_problem):
     """
     Analyzes thread dumps, identifies problematic threads, and performs initial analysis.
     
@@ -88,7 +103,7 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, folder_path,
     Returns:
         tuple: A tuple containing (initial_report, problem_threads)
     """
-    combined_content = analyze_thread_dumps(thread_groups_config, folder_path)
+    combined_content = analyze_thread_dumps(thread_groups_config, in_memory_files)
     
     if not combined_content:
         return "No thread dump content could be analyzed.", []

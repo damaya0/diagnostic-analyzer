@@ -7,27 +7,52 @@ import re
 from .utils import call_chatgpt_api
 from .prompts import get_log_analysis_prompt, get_class_analysis_prompt
 
-#Function to retrieve content from log.txt file inside the folder
-def get_log_content(folder_path):
+def get_log_content(in_memory_files):
     """
-    Retrieves the content of the log.txt file in the specified folder.
+    Retrieves the content of the log.txt file from in-memory files.
 
     Args:
-        folder_path (str): The path to the folder containing the log.txt file.
+        in_memory_files (dict): Dictionary of {filename: file_content} for in-memory files.
+            Each file_content should be a BytesIO object or a bytes/string content.
 
     Returns:
-        str: The content of the log.txt file.
+        str: The content of the log.txt file, or None if not found.
     """
-    log_file_path = os.path.join(folder_path, 'log.txt')
-    try:
-        with open(log_file_path, 'r', encoding='utf-8') as f:
-            log_content = f.read()
-            return log_content
-    except FileNotFoundError:
-        print(f"Error: log.txt not found in {folder_path}")
+    # Check if log.txt exists in the in_memory_files dictionary
+    if 'log.txt' not in in_memory_files:
+        print("Error: log.txt not found in uploaded files")
         return None
+    
+    try:
+        # Get the content from the dictionary
+        file_content = in_memory_files['log.txt']
+        
+        # Handle different types of file content
+        if hasattr(file_content, 'read'):
+            # If it's a file-like object (BytesIO, etc.)
+            file_content.seek(0)  # Ensure we're at the start of the file
+            
+            if hasattr(file_content, 'getvalue'):
+                # BytesIO object
+                log_content = file_content.getvalue()
+            else:
+                # Other file-like object
+                log_content = file_content.read()
+                file_content.seek(0)  # Reset position after reading
+                
+            # Convert bytes to string if needed
+            if isinstance(log_content, bytes):
+                log_content = log_content.decode('utf-8', errors='ignore')
+        else:
+            # If it's already a string or bytes
+            log_content = file_content
+            if isinstance(log_content, bytes):
+                log_content = log_content.decode('utf-8', errors='ignore')
+                
+        return log_content
+        
     except Exception as e:
-        print(f"Error reading log.txt: {e}")
+        print(f"Error processing log.txt: {e}")
         return None
     
 # Function to analyze error logs

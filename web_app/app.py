@@ -7,13 +7,14 @@ import tempfile
 import shutil
 import uuid
 import threading
+from io import BytesIO
 from datetime import datetime, timedelta, timezone
 
 # Add the parent directory to the path so we can import the diagnostic package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diagnostic_analyzer_package.thread_analyzer import analyze_thread_dumps_and_extract_problems, get_comprehensive_thread_analysis
 from diagnostic_analyzer_package.log_analyzer import get_log_content, analyze_error_log, fetch_and_analyze_files
-from diagnostic_analyzer_package.utils import read_package_file, cleanup_thread, clean_temp_dir
+from diagnostic_analyzer_package.utils import read_package_file, cleanup_thread
 from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
@@ -28,7 +29,6 @@ app.config['GITHUB_API_KEY'] = os.getenv('GITHUB_API_KEY')
 app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
 # Create a directory to store session files
-os.makedirs(os.path.join(os.path.dirname(__file__), 'session_data'), exist_ok=True)
 REPORTS_DIR = os.path.join(os.path.dirname(__file__), 'reports')
 os.makedirs(REPORTS_DIR, exist_ok=True)
 
@@ -40,9 +40,6 @@ memory_store = {
 
 # Store timestamps of when data was added
 data_timestamps = {}
-
-# Store temporary directory paths
-temp_dirs = {}
 
 # Load thread groups configuration
 thread_groups_config = json.loads(read_package_file('ThreadGroups.json'))
@@ -66,25 +63,31 @@ def analyze():
     if 'diagnostic_files' not in request.files:
         return jsonify({"error": "No files uploaded"}), 400
     
-    temp_dir = tempfile.mkdtemp()
-    
     # Generate a unique session ID
     session_id = str(uuid.uuid4())
-    temp_dirs[session_id] = temp_dir
     session['session_id'] = session_id
     
     # Save uploaded files to the temp directory
     files = request.files.getlist('diagnostic_files')
+
+    in_memory_files = {}
     for file in files:
-        file.save(os.path.join(temp_dir, file.filename))
+            # Read the file into memory
+            file_content = file.read()
+            # Create a BytesIO object that acts like a file
+            in_memory_file = BytesIO(file_content)
+            # Store with filename for reference
+            in_memory_files[file.filename] = in_memory_file
     
+    print(in_memory_files)
+
     # Analyze thread dumps
     thread_analysis, problem_threads = analyze_thread_dumps_and_extract_problems(
-        thread_groups_config, temp_dir, customer_problem
+        thread_groups_config, in_memory_files, customer_problem
     )
     
     # Get log content
-    log_content = get_log_content(temp_dir)
+    log_content = get_log_content(in_memory_files)
     
     if problem_threads:
         comprehensive_thread_analysis = get_comprehensive_thread_analysis(
@@ -110,7 +113,6 @@ def analyze():
         'comprehensive_thread_analysis': comprehensive_thread_analysis,
         'log_analysis': log_analysis,
         'error_message': error_message,
-        'temp_dir': temp_dir
     }
     
     # Store in memory_store and update timestamp
@@ -141,9 +143,6 @@ def analyze():
         # Store in memory_store and update timestamp
         memory_store['results'][session_id] = results
         data_timestamps[session_id] = datetime.now(timezone.utc)
-
-        # Clean up temporary directory
-        clean_temp_dir(session_id, temp_dirs)
         
         return jsonify({"success": True, "redirect": f"/results?session_id={session_id}"})
 
@@ -208,11 +207,6 @@ def analyze_classes():
                 "issue_line": 1
             })
     
-    # Get temp directory from analysis data
-    temp_dir = analysis_data.get('temp_dir')
-    if not temp_dir or not os.path.exists(temp_dir):
-        return jsonify({"error": "Temporary directory not found"}), 400
-    
     # Perform class analysis
     class_analysis = None
     if selected_classes:
@@ -271,13 +265,6 @@ def analyze_classes():
     # Store in memory_store and update timestamp
     memory_store['results'][session_id] = results
     data_timestamps[session_id] = datetime.now(timezone.utc)
-    
-    # Clean up temporary directory and analysis data file
-    try:
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-    except Exception as e:
-        print(f"Error cleaning up: {e}")
     
     return jsonify({"success": True, "redirect": f"/results?session_id={session_id}"})
 
@@ -340,14 +327,6 @@ def skip_class_analysis():
     memory_store['results'][session_id] = results
     data_timestamps[session_id] = datetime.now(timezone.utc)
     
-    # Clean up the temp directory and analysis data file
-    try:
-        temp_dir = analysis_data.get('temp_dir')
-        if temp_dir and os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-    except Exception as e:
-        print(f"Error cleaning up: {e}")
-    
     # Redirect to results page
     return redirect(f'/results?session_id={session_id}')
 
@@ -381,18 +360,6 @@ def download_report(filename):
 def error():
     error_message = request.args.get('message', 'An unknown error occurred')
     return render_template('error.html', error=error_message)
-
-# Clean up on app shutdown
-@app.teardown_appcontext
-def cleanup_on_shutdown(exception=None):
-    """Clean up temp directories on app shutdown"""
-    for session_id in memory_store['analysis_data']:
-        temp_dir = memory_store['analysis_data'][session_id].get('temp_dir')
-        if temp_dir and os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                print(f"Error cleaning temp dir: {e}")
 
 # Cleanup old report files periodically
 def cleanup_old_report_files():
