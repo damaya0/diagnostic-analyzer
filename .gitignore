@@ -33,3 +33,5 @@ htmlcov/
 
 # Temp files
 *.tmp
+
+.env
