@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import sys
 import os
 import json
-import tempfile
 import shutil
 import uuid
 import threading
@@ -79,8 +78,6 @@ def analyze():
             # Store with filename for reference
             in_memory_files[file.filename] = in_memory_file
     
-    print(in_memory_files)
-
     # Analyze thread dumps
     thread_analysis, problem_threads = analyze_thread_dumps_and_extract_problems(
         thread_groups_config, in_memory_files, customer_problem

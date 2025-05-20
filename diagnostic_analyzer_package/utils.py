@@ -184,12 +184,3 @@ def cleanup_thread(memory_store, data_timestamps):
         cleanup_old_data(memory_store, data_timestamps)
         time.sleep(3600)  # Run once per hour
 
-def clean_temp_dir(session_id, temp_dirs):
-    """Clean up temporary directory"""
-    if session_id in temp_dirs:
-        try:
-            if os.path.exists(temp_dirs[session_id]):
-                shutil.rmtree(temp_dirs[session_id])
-            del temp_dirs[session_id]
-        except Exception as e:
-            print(f"Error cleaning up temporary directory: {e}")
