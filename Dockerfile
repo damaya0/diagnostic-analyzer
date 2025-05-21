@@ -23,4 +23,4 @@ COPY .env .env
 EXPOSE 8000
 
 # Command to run your application
-CMD ["python", "web_app/app.py"]
+CMD ["python", "backend/app.py"]

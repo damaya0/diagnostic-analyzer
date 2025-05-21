@@ -92,14 +92,11 @@ def analyze_error_log(log_content, customer_problem):
         
         # Extract suspected classes from the response
         suspected_classes = extract_suspected_classes(log_analysis)
-        error_message = extract_error_message(log_analysis)
-        print(f"[INFO] Identified {len(suspected_classes)} suspected classes: {suspected_classes}")
-        
+        error_message = extract_error_message(log_analysis)        
         return log_analysis, suspected_classes, error_message
         
     except Exception as e:
-        error_message = f"[ERROR] Error in log analysis: {str(e)}"
-        print(error_message)
+        print(f"[ERROR] Error in log analysis: {str(e)}")
         return error_message, []
 
 # Function to extract suspected classes from log analysis
@@ -174,8 +171,6 @@ def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_t
         file_content = fetch_file_content(file_path)
         file_content_with_line_number = embed_line_number(file_content, line_number)
 
-        print(f"[INFO] Fetched content for {filename} is {file_content_with_line_number[:100]}...")  # Print first 50 chars for brevity
-
         class_files_content[filename] = f"// Content in {filename}\n// {file_content_with_line_number} \n// Line number with the issue: {line_number}\n"
     
     class_analysis_prompt = get_class_analysis_prompt(customer_problem, class_files_content, error_message_text, log_analysis)
@@ -224,7 +219,6 @@ def get_file_path(filename: str, package_name: str) -> str:
         file_urls = search_file_paths(owner, filename, token)
         for file_url in file_urls:
             if path in file_url:
-                print(f"Correct File URL: {file_url}")
                 return file_url
         
     except requests.exceptions.RequestException as e:
@@ -233,7 +227,6 @@ def get_file_path(filename: str, package_name: str) -> str:
 # Function to search for file paths by file name
 def search_file_paths(owner, filename, token):
     query = f"org:{owner} filename:{filename}.java"
-    print(f"Searching for files with query: {query}")
     url = f"https://api.github.com/search/code?q={query}"
     headers = {
         "Authorization": f"token {token}",
