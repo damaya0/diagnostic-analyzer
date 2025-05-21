@@ -3,3 +3,5 @@ reportlab>=3.6.0
 openai>=1.0.0
 requests>=2.25.0
 dotenv>=0.0.5
+flask-cors
+gunicorn

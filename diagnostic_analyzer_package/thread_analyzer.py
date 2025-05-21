@@ -19,14 +19,9 @@ def analyze_thread_dumps(thread_groups_config, in_memory_files):
 
         pattern = re.compile(rf"threaddump-{i}-\d+\.txt")
         matching_files = [f for f in in_memory_files.keys() if pattern.match(f)]
-        
-        if not matching_files:
-            print(f"No thread dump files found matching pattern threaddump-{i}-*.txt") #TODO:logs
-            continue
-            
+
         thread_dump_filename = matching_files[0]
-        print(thread_dump_filename)
-        
+
         # Get file content directly from in_memory_files
         file_content = in_memory_files[thread_dump_filename]
         
@@ -85,9 +80,6 @@ def analyze_thread_dumps(thread_groups_config, in_memory_files):
 
     combined_content = "\n\n".join(file_contents)
 
-    with open('combined_thread_content.txt', 'w') as file:
-        file.write(combined_content)
-
     return combined_content
 
 # Function to analyze thread dumps and extract problematic threads
@@ -110,33 +102,19 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, in_memory_fi
 
     try:
         # Call the API for initial analysis
-        print("\n[INFO] Performing initial thread dump analysis...")
         initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content, thread_groups_config)
         initial_response = call_chatgpt_api(initial_prompt)
         if "context_length_exceeded" in initial_response:
             print("Context length exceeded. Trying with a smaller context.")
             short_initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content[:600000])
             initial_response = call_chatgpt_api(short_initial_prompt)
-
-        # # Save the initial report using write_analysis_report
-        # initial_response = write_analysis_report(
-        #     initial_response, 
-        #     'Initial Thread Dump Analysis', 
-        #     'initial_thread_dump_analysis.pdf'
-        # )
-        # print(f"[INFO] Initial thread dump analysis completed and saved")
-        
-        # Extract problem threads from the response
         problem_threads = extract_problem_threads(initial_response)
-        print(f"[INFO] Identified {len(problem_threads)} problematic threads: {problem_threads}")
         
         return initial_response, problem_threads
         
     except Exception as e:
-        error_message = f"[ERROR] Error in thread dump analysis: {str(e)}"
-        print(error_message)
-        return error_message, []
-
+        print(f"[ERROR] Error in thread dump analysis: {str(e)}")
+        
 # Extract thread names from the initial response
 def extract_problem_threads(initial_response):
     """
@@ -200,7 +178,6 @@ def get_comprehensive_thread_analysis(initial_response, problem_threads, custome
     # Collect stack traces for each problematic thread
     thread_stack_traces = {}
     for thread_name in problem_threads:
-        print(f"[INFO] Extracting stack trace for thread: {thread_name}")
         stack_trace = get_stack_trace(thread_name)
         thread_stack_traces[thread_name] = stack_trace
     
@@ -208,14 +185,6 @@ def get_comprehensive_thread_analysis(initial_response, problem_threads, custome
     
     try:
         comprehensive_analysis = call_chatgpt_api(comprehensive_prompt)
-        
-        # # Generate PDF report and also save text version
-        # comprehensive_analysis = write_analysis_report(
-        #     comprehensive_analysis, 
-        #     'Thread Analysis', 
-        #     'comprehensive_thread_analysis.pdf'
-        # )
-        
         return comprehensive_analysis
         
     except Exception as e:
