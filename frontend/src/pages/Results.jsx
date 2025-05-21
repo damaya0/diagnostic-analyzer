@@ -39,12 +39,6 @@ export default function Results() {
         thread_analysis ,
     } = results;
 
-
-    
-
-
-
-
     const handleDownloadReport = async () => {
 
         setIsAnalyzing(true);

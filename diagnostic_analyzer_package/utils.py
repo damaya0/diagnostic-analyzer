@@ -3,27 +3,31 @@ import openai
 import textwrap
 import os
 import time
+import logging
 from datetime import datetime, timedelta, timezone
+
+# Configure logger
+logger = logging.getLogger("diagnostic_analyzer")
 
 # Pretty print function for CLI output
 def pretty_print(message, type_="info"):
     """
-    Pretty print a message to the console.
+    Pretty print a message to the console using logging.
     
     Args:
         message (str): The message to print.
         type_ (str, optional): The type of message ('info', 'warning', 'error', 'success'). Defaults to "info".
     """
     if type_ == "info":
-        print(f"\n[INFO] {message}")
+        logger.info(message)
     elif type_ == "warning":
-        print(f"\n[WARNING] {message}")
+        logger.warning(message)
     elif type_ == "error":
-        print(f"\n[ERROR] {message}")
+        logger.error(message)
     elif type_ == "success":
-        print(f"\n[SUCCESS] {message}")
+        logger.info(f"SUCCESS: {message}")
     else:
-        print(f"\n{message}")
+        logger.info(message)
     
 # Function to read a file from the package data
 def read_package_file(filename):
@@ -32,7 +36,7 @@ def read_package_file(filename):
     if data:
         return data.decode('utf-8')
     else: 
-        print(f"Error: File not found in package: {filename}")
+        logger.error(f"File not found in package: {filename}")
         return None
     
 
@@ -71,7 +75,7 @@ def call_chatgpt_api(prompt):
         )
         return response.choices[0].message.content
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         return e
 
 def draw_wrapped_text(canvas, text, x, y, width, bottom_margin, height, top_margin, 

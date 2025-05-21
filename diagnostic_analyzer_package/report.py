@@ -3,14 +3,18 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+import logging
 
 from .utils import draw_wrapped_text
+
+# Configure logger
+logger = logging.getLogger("diagnostic_analyzer")
 
 def write_final_report(customer_problem, log_analysis, comprehensive_analysis, class_analysis=None, final_report=None):
     """
     Writes the final consolidated report as a PDF and returns it as a BytesIO object (in-memory).
     """
-    print("\n[INFO] Generating final PDF report (in-memory)...")
+    logger.info("Generating final PDF report (in-memory)...")
     
     # Use an in-memory bytes buffer
     buffer = BytesIO()
@@ -110,5 +114,5 @@ def write_final_report(customer_problem, log_analysis, comprehensive_analysis, c
     c.save()
     buffer.seek(0)  # Move to the beginning so send_file works properly
 
-    print(f"[INFO] Final PDF report generated in memory.")
+    logger.info("Final PDF report generated in memory.")
     return buffer

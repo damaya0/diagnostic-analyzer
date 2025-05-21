@@ -2,17 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './styles.css'; // Adjust the path as necessary
 import { useLocation } from 'react-router-dom';
-import { last } from 'lodash';
 
-// Props: 
-// comprehensiveThreadAnalysis, logAnalysis,  suspectedClasses (array), sessionId
 export default function SelectClasses({
   
 }) {
     const navigate = useNavigate();
-    // const stored = localStorage.getItem('analysisData');
-
-    // const analysisData = stored ? JSON.parse(stored) : {};
 
     const location = useLocation();
     const analysisData = location.state?.analysis_data;

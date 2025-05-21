@@ -57,7 +57,7 @@ def analyze():
     # Save uploaded files to the temp directory
     files = request.files.getlist('diagnostic_files')
 
-    print(f"\n[INFO] Received {len(files)} files for analysis.")
+    logger.info(f"Received {len(files)} files for analysis.")
 
     in_memory_files = {}
     for file in files:
@@ -142,7 +142,7 @@ def analyze_classes():
                 selected_classes.append(sus_class)
     else:
         # If they're just strings
-        print(f"WARNING: suspected_classes are not in dictionary format: {original_suspected_classes}")
+        logger.warning(f"suspected_classes are not in dictionary format: {original_suspected_classes}")
         # Create mock dictionaries for the selected classes
         for class_name in selected_class_names:
             # This is a fallback approach - these are dummy values
@@ -156,7 +156,7 @@ def analyze_classes():
     class_analysis = None
     if selected_classes:
         try:
-            print(f"\n[INFO] Analyzing selected classes: {selected_classes}")
+            logger.info(f"Analyzing selected classes: {selected_classes}")
             class_analysis = fetch_and_analyze_files(
                 selected_classes,  # Now this is a list of dictionaries
                 customer_problem, 

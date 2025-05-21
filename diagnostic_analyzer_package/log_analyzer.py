@@ -3,9 +3,12 @@ import requests
 import base64
 import ast
 import re
+import logging
 
 from .utils import call_chatgpt_api
 from .prompts import get_log_analysis_prompt, get_class_analysis_prompt
+
+logger = logging.getLogger("diagnostic_analyzer")
 
 def get_log_content(in_memory_files):
     """
@@ -20,7 +23,7 @@ def get_log_content(in_memory_files):
     """
     # Check if log.txt exists in the in_memory_files dictionary
     if 'log.txt' not in in_memory_files:
-        print("Error: log.txt not found in uploaded files")
+        logger.error("Error: log.txt not found in uploaded files")
         return None
     
     try:
@@ -52,7 +55,7 @@ def get_log_content(in_memory_files):
         return log_content
         
     except Exception as e:
-        print(f"Error processing log.txt: {e}")
+        logger.error(f"Error processing log.txt: {e}")
         return None
     
 # Function to analyze error logs
@@ -68,10 +71,10 @@ def analyze_error_log(log_content, customer_problem):
         tuple: A tuple containing (return log_analysis, suspected_classes, error_message)
     """
     
-    print("\n[INFO] Analyzing error logs...")
+    logger.info("Analyzing error logs...")
     
     if not log_content:
-        print("[WARNING] No log content available for analysis")
+        logger.warning("[WARNING] No log content available for analysis")
         return "No log content available for analysis.", []
 
     sus_classes = [
@@ -96,7 +99,7 @@ def analyze_error_log(log_content, customer_problem):
         return log_analysis, suspected_classes, error_message
         
     except Exception as e:
-        print(f"[ERROR] Error in log analysis: {str(e)}")
+        logger.error(f"[ERROR] Error in log analysis: {str(e)}")
         return error_message, []
 
 # Function to extract suspected classes from log analysis
@@ -119,7 +122,7 @@ def extract_suspected_classes(log_analysis):
             if isinstance(suspected_classes, list):
                 return suspected_classes
     except Exception as e:
-        print(f"Error while extracting suspected classes: {e}")
+        logger.error(f"Error while extracting suspected classes: {e}")
 
     return []
 
@@ -140,7 +143,7 @@ def extract_error_message(log_analysis):
             error_message = match.group(1).strip()
             return error_message
     except Exception as e:
-        print(f"Error while extracting error message: {e}")
+        logger.error(f"Error while extracting error message: {e}")
 
     return ""
     
@@ -189,7 +192,7 @@ def fetch_and_analyze_files(suspected_classes, customer_problem, error_message_t
         
     except Exception as e:
         error_message = f"[ERROR] Error in class analysis: {str(e)}"
-        print(error_message)
+        logger.error(error_message)
         return error_message
     
 # Function to embed line number in the file content
@@ -222,7 +225,7 @@ def get_file_path(filename: str, package_name: str) -> str:
                 return file_url
         
     except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
 
 # Function to search for file paths by file name
 def search_file_paths(owner, filename, token):
