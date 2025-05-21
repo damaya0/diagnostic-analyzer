@@ -1,6 +1,5 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, send_file
+from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
-import base64
 import sys
 import os
 import json
@@ -8,8 +7,8 @@ from io import BytesIO
 from datetime import timedelta
 from flask_cors import CORS
 from flask import Response
+import logging
 
-# Add the parent directory to the path so we can import the diagnostic package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from diagnostic_analyzer_package.thread_analyzer import analyze_thread_dumps_and_extract_problems, get_comprehensive_thread_analysis
 from diagnostic_analyzer_package.log_analyzer import get_log_content, analyze_error_log, fetch_and_analyze_files
@@ -17,7 +16,8 @@ from diagnostic_analyzer_package.utils import read_package_file
 from diagnostic_analyzer_package.report import write_final_report
 from diagnostic_analyzer_package.final_analyzer import get_diagnostic_conclusion
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/build', static_url_path='/')
+
 CORS(app) 
 
 load_dotenv()
@@ -26,8 +26,24 @@ app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Limit uploads to 50MB
 app.config['GITHUB_API_KEY'] = os.getenv('GITHUB_API_KEY')
 app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("diagnostic_analyzer")
+
+# Suppress specific loggers
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+
 # Load thread groups configuration
 thread_groups_config = json.loads(read_package_file('ThreadGroups.json'))
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -38,7 +54,6 @@ def analyze():
     if 'diagnostic_files' not in request.files:
         return jsonify({"error": "No files uploaded"}), 400
 
-    
     # Save uploaded files to the temp directory
     files = request.files.getlist('diagnostic_files')
 
@@ -49,7 +64,7 @@ def analyze():
             file_content = file.read()
             in_memory_file = BytesIO(file_content)
             in_memory_files[file.filename] = in_memory_file
-    
+
     # Analyze thread dumps
     thread_analysis, problem_threads = analyze_thread_dumps_and_extract_problems(
         thread_groups_config, in_memory_files, customer_problem

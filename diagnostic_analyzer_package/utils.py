@@ -3,7 +3,6 @@ import openai
 import textwrap
 import os
 import time
-import shutil
 from datetime import datetime, timedelta, timezone
 
 # Pretty print function for CLI output
@@ -60,7 +59,6 @@ def process_output_to_string(output):
 
 # Function to call the ChatGPT API
 def call_chatgpt_api(prompt):
-
     # Set the OpenAI API key
     openai.api_key = os.getenv("OPENAI_API_KEY")
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import './styles.css'; // Adjust the path as necessary
 import { useLocation } from 'react-router-dom';
-import html2pdf from 'html2pdf.js';
+
 import { useNavigate } from 'react-router-dom';
 
 export default function Results() {

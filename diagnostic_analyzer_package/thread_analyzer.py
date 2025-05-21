@@ -3,6 +3,7 @@ import os
 import json
 
 from .utils import process_output_to_string, call_chatgpt_api
+
 from .prompts import get_initial_thread_analysis_prompt, get_comprehensive_thread_analysis_prompt
 from .thread_dump_processor import Analysis, ThreadStatus
 
@@ -95,6 +96,7 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, in_memory_fi
     Returns:
         tuple: A tuple containing (initial_report, problem_threads)
     """
+    print("\n[INFO] Analyzing thread dumps and extracting problematic threads...")
     combined_content = analyze_thread_dumps(thread_groups_config, in_memory_files)
     
     if not combined_content:
@@ -108,6 +110,7 @@ def analyze_thread_dumps_and_extract_problems(thread_groups_config, in_memory_fi
             print("Context length exceeded. Trying with a smaller context.")
             short_initial_prompt = get_initial_thread_analysis_prompt(customer_problem, combined_content[:600000])
             initial_response = call_chatgpt_api(short_initial_prompt)
+            
         problem_threads = extract_problem_threads(initial_response)
         
         return initial_response, problem_threads
