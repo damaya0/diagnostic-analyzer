@@ -54,8 +54,6 @@ export default function SelectClasses({
     }
   };
 
-//   localStorage.setItem('selectedClasses', JSON.stringify(selectedClasses));
-
   // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
